@@ -1,0 +1,435 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es" lang="es">
+  
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<title>Ejercicio 18 - Teclado virtual</title>
+ 
+<style type="text/css" media="screen">
+body, html { padding:0; margin:0; }
+p { font-family:verdana,tahoma,arial,helvetica,sans-serif; font-size:13px; margin-left:10px; }
+#keyboard {
+  padding:30px 8px 8px 8px;
+  margin:5px 0 0 0;
+  height:300px;
+  width:1000px;
+  background-color:#eee;
+Insert
+Inicio
+Re
+Pag
+Bloq
+Num
+/
+*
+-
+Supr
+Fin
+Av
+Pag
+7
+Inicio
+8
+9
+RePag
++
+Bloq Mayus
+ 
+4
+5
+6
+ 
+>
+<
+1
+Fin
+2
+3
+AvPag
+Enter
+Ctrl
+Windows Key
+Alt
+ 
+Alt Gr
+Ctrl
+0
+Ins
+.
+Supr
+ 
+
+  border-top:3px solid #ccc;
+  border-right:3px solid #aaa;
+  border-bottom:5px solid #888;
+  border-left:3px solid #bbb;
+}
+kbd, .tecla {
+  font-family:verdana,tahoma,arial,helvetica,sans-serif;
+  font-size:13px;
+  border-top:2px solid #ccc;
+  border-right:5px solid #aaa;
+  border-bottom:9px solid #888;
+  border-left:5px solid #bbb;
+  padding:3px 6px 3px 6px;
+  white-space:nowrap;
+  color:#000;
+  background:#eee;
+  width:22px;
+  height:30px;
+  float:left;
+  overflow:hidden;
+  cursor: pointer; cursor: hand;
+}
+.delete { padding:3px 8px 3px 4px; }
+img { margin-top:2px; }
+.narrow, .lock { font-family:arial,helvetica,sans-serif; font-size:9px; }
+#keyboard div, .clear { clear:both; margin:0; }
+.fontgap { margin-left:10px; }
+.rightgap { margin-right:12px; }
+#esc, #f4, #f8 { margin-right:30px; }
+#row1 { margin-bottom:12px; width:990px; height:50px; }
+.tab { width:48px; }
+.capslock { width:62px; }
+.shift-right { width:98px; margin-right:56px; }
+.backspace { width:68px; }
+.spacebar { width:234px; }
+.numpad-0 { width:66px; }
+.shift-left, #ctrl-left, #ctrl-right, #windows-left, #windows-right, #alt-left, .alt-right, #application { width:36px; }
+.enter-top { border-bottom:0; height:39px; width:42px; }
+#enter-bottom { border-top:0; height:32px; width:28px; margin-right:156px; }
+.numpad-top { border-bottom:0; height:10px; padding-top:32px;}
+.numpad-bottom { border-top:0; height:32px; }
+#arrow-up {margin-right:56px;}
+#sysreq, #break { font-family:'arial narrow'; font-size:10px; position:absolute; top:72px; left:696px; z-index:2; }
+#break {left:785px;}
+.lock { margin-left:30px; margin-top:25px; float:left;}
+#enter-edge { position:absolute; top:183px; left:609px; z-index:2; }
+#led-active, #led2, #led3 {
+  position:absolute;
+  top:40px;
+  left:850px;
+  width:6px;
+  height:6px;
+  margin-left:5px;
+  border-top:2px solid #888;
+  border-right:2px solid #bbb;
+  border-bottom:2px solid #ccc;
+  border-left:2px solid #aaa;
+  background-color:#6f0;
+}
+#led2 {left:900px; background-color:#060;}
+#led3 {left:950px; background-color:#060;}
+.pulsada { background: #FFFF99; border-top-width:5px; border-bottom-width: 6px;}
+.enter-top.pulsada {border-bottom: none; border-top-width:2px;}
+#contenido, #contenidoGuardado { margin: 10px; background-color: #ededed; border: 2px solid #a0a0a0; padding: 1em;}
+</style>
+<script src="util.js" type="text/javascript"></script>
+<script type="text/javascript" language="javascript">
+var teclados = {};
+var tecladoActivo = null;
+var teclasPulsadas = [];
+var teclasEspeciales = ["borrado", "tabulador", "enter", "espaciadora", "mayusculas", "shift_izquierdo", "shift_derecho", "altgr"];
+var tecladoIdioma = null;
+var tecladoVariante = null;
+var estado = {mayusculas: false, shift: false, altgr: false};
+ 
+function descargaTeclado(idioma) {
+  var cargador = new net.CargadorContenidosCompleto("http://localhost/RUTA_HASTA_EL_ARCHIVO/tecladoVirtual.php?nocache="+Math.random(), 
+                              function() { teclados[idioma] = eval('('+this.req.responseText+')'); },
+                              null, 
+                              "POST", 
+                              "accion=cargaTeclado&idioma="+idioma, 
+                              "application/x-www-form-urlencoded",
+                              false);
+}
+ 
+function cargaTeclado() {
+  // Obtener o descargar el teclado requerido
+  if(teclados[tecladoIdioma] == null) {
+    descargaTeclado(tecladoIdioma);
+  }
+  var teclado = teclados[tecladoIdioma][tecladoVariante];
+ 
+  // Cargar teclas normales y añadir el evento a cada una
+  for(var i=0; i<teclado.length; i++) {
+    if(teclado[i] != undefined) {
+      document.getElementById('tecla_'+i).innerHTML = teclado[i];
+      document.getElementById('tecla_'+i).onclick = pulsaTecla;
+    }
+    else {
+      document.getElementById('tecla_'+i).innerHTML = '';
+    }
+  }
+ 
+  // Añadir eventos a las teclas especiales
+  for(var i=0; i<teclasEspeciales.length; i++) {
+    document.getElementById('tecla_especial_'+teclasEspeciales[i]).onclick = pulsaTeclaEspecial;
+  }
+ 
+  tecladoActivo = teclado;
+}
+ 
+function pulsaTecla() {
+  var teclaPulsada = this.id.replace(/tecla_/gi, "");
+  var caracter = tecladoActivo[teclaPulsada];
+ 
+  teclasPulsadas.push(caracter);
+ 
+  // Iluminar la tecla pulsada
+  this.className+=" pulsada";
+  setTimeout(apagaTecla, 100);
+ 
+  mostrarContenidos();
+}
+ 
+function apagaTecla() {
+  for(var i in tecladoActivo) {
+    if(tecladoActivo[i]) {
+      document.getElementById('tecla_'+i).className = document.getElementById('tecla_'+i).className.replace(/pulsada/ig, "");
+    }
+  }
+  for(var i in teclasEspeciales) {
+    if(teclasEspeciales[i]) {
+      document.getElementById('tecla_especial_'+teclasEspeciales[i]).className = document.getElementById('tecla_especial_'+teclasEspeciales[i]).className.replace(/pulsada/ig, "");
+    }
+  }
+}
+ 
+function pulsaTeclaEspecial() {
+  var teclaPulsada = this.id.replace(/tecla_especial_/gi, "");
+ 
+  // Iluminar la tecla pulsada
+  this.className+=" pulsada";
+  setTimeout(apagaTecla, 100);
+ 
+  switch(teclaPulsada) {
+    case 'borrado':
+      teclasPulsadas.pop();
+      break;
+    case 'tabulador':
+      teclasPulsadas.push('\t');
+      break;
+    case 'enter':
+      teclasPulsadas.push('\n');
+      break;
+    case 'espaciadora':
+      teclasPulsadas.push(' ');
+      break;
+    case 'mayusculas':
+      cargaVarianteTeclado('mayusculas');
+      break;
+    case 'shift_izquierdo':
+      cargaVarianteTeclado('shift_izquierdo');
+      break;
+    case 'shift_derecho':
+      cargaVarianteTeclado('shift_derecho');
+      break;
+    case 'altgr':
+      cargaVarianteTeclado('altgr');
+      break;
+  }
+ 
+  mostrarContenidos();
+}
+ 
+function cargaVarianteTeclado(variante) {
+  var nombreVariante = {mayusculas: 'caps', shift_izquierdo: 'shift', shift_derecho: 'shift', altgr: 'altgr'};
+ 
+  if(estado[variante] == true) {
+    estado[variante] = false;
+    tecladoVariante = 'normal';
+  }
+  else {
+    estado[variante] = true;
+    tecladoVariante = nombreVariante[variante];
+  }
+  cargaTeclado();
+}
+ 
+function mostrarContenidos(texto, zona) {
+  var elemento = zona || "contenido";
+  var contenido = texto || teclasPulsadas.join("");
+ 
+  contenido = contenido.replace(/\n/gi, '<br/>');
+  contenido = contenido.replace(/\t/gi, '&nbsp;&nbsp;&nbsp;&nbsp;');
+  contenido = contenido.replace(/ /gi, '&nbsp;');
+ 
+  document.getElementById(elemento).innerHTML = contenido;
+}
+ 
+function muestraIdiomas() {
+  var respuesta = eval('('+this.req.responseText+')');
+  var lista = document.getElementById("idiomas");
+ 
+  var i=0;
+  for(var codigo in respuesta.idiomas) {
+    // Añadir idiomas a la lista desplegable
+    lista.options[i] = new Option(respuesta.idiomas[codigo], codigo);
+    i++;
+    // Crear los objetos que almacenan los teclados de cada idioma 
+    teclados[codigo] = null;
+  }
+ 
+  // Cargar el teclado del idioma por defecto (la variante normal)
+  tecladoIdioma = respuesta.defecto;
+  tecladoVariante = 'normal';
+  cargaTeclado();
+}
+ 
+function cambiaIdioma() {
+  var lista = document.getElementById("idiomas");
+  tecladoIdioma = lista.options[lista.selectedIndex].value;
+  cargaTeclado();
+}
+ 
+function guarda() {
+  var cargador = new net.CargadorContenidosCompleto("http://localhost/RUTA_HASTA_EL_ARCHIVO/tecladoVirtual.php?nocache="+Math.random(), 
+                            function() { mostrarContenidos(unescape(this.req.responseText), "contenidoGuardado"); },
+                            null, 
+                            "POST", 
+                            "accion=guardar&contenido="+escape(teclasPulsadas.join("")), 
+                            "application/x-www-form-urlencoded");
+}
+ 
+window.onload = function() {
+  var cargador = new net.CargadorContenidosCompleto("http://localhost/RUTA_HASTA_EL_ARCHIVO/tecladoVirtual.php?nocache="+Math.random(), 
+                              muestraIdiomas, 
+                              null, 
+                              "POST", 
+                              "accion=listaIdiomas", 
+                              "application/x-www-form-urlencoded");
+ 
+  // Evento necesario para cambiar el idioma del teclado
+  document.getElementById("idiomas").onchange = cambiaIdioma;
+ 
+  setInterval(guarda, 30 * 1000);
+}
+ 
+/*
+Los teclados de cada idioma y algunas ideas de implementación son originales del JavaScript Virtual Keyboard, cuya nota de copyright
+se incluye a continuación:
+*/
+ /*
+ * JavaScript Virtual Keyboard, version 2.2
+ *
+ * Copyright (C) 2006-2007 Dmitriy Khudorozhkov
+ *
+ * This software is provided "as-is", without any express or implied warranty.
+ * In no event will the author be held liable for any damages arising from the
+ * use of this software.
+ *
+ * Permission is granted to anyone to use this software for any purpose,
+ * including commercial applications, and to alter it and redistribute it
+ * freely, subject to the following restrictions:
+ *
+ * 1. The origin of this software must not be misrepresented; you must not
+ *    claim that you wrote the original software. If you use this software
+ *    in a product, an acknowledgment in the product documentation would be
+ *    appreciated but is not required.
+ *
+ * 2. Altered source versions must be plainly marked as such, and must not be
+ *    misrepresented as being the original software.
+ *
+ * 3. This notice may not be removed or altered from any source distribution.
+ *
+ *  - Dmitriy Khudorozhkov, kh_dmitry2001@mail.ru
+ */
+ </script>
+ 
+</head>
+ 
+<body>
+ 
+<div id="led-active">&nbsp;</div>
+<div id="led2">&nbsp;</div>
+<div id="led3">&nbsp;</div>
+ 
+ 
+<div id="keyboard">
+ 
+<div id="row1">
+  <kbd id="esc">Esc</kbd><kbd>F1</kbd><kbd>F2</kbd><kbd>F3</kbd><kbd id="f4">F4</kbd>
+  <kbd>F5</kbd><kbd>F6</kbd><kbd>F7</kbd><kbd id="f8">F8</kbd><kbd>F9</kbd><kbd>F10</kbd>
+  <kbd>F11</kbd><kbd class="rightgap">F12</kbd><kbd class="narrow">Impr<br>Pant</kbd>
+  <kbd class="narrow">Bloq<br>Des</kbd><kbd class="narrow">Pausa</kbd>
+  <span class="lock">Bloq<br>Num</span><span class="lock">Bloq<br>Mayus</span>
+  <span class="lock">Bloq<br>Des</span>
+</div>
+ 
+<div id="row2">
+  <kbd id="tecla_0"></kbd><kbd id="tecla_1"></kbd><kbd id="tecla_2"></kbd>
+  <kbd id="tecla_3"></kbd><kbd id="tecla_4"></kbd><kbd id="tecla_5"></kbd>
+  <kbd id="tecla_6"></kbd><kbd id="tecla_7"></kbd><kbd id="tecla_8"></kbd>
+  <kbd id="tecla_9"></kbd><kbd id="tecla_10"></kbd><kbd id="tecla_11"></kbd>
+  <kbd id="tecla_12"></kbd>
+  <kbd id="tecla_especial_borrado" class="rightgap backspace"><img src="imagenes/backspace.gif" alt="" height="19" width="52"></kbd>
+  <kbd class="narrow">Insert</kbd><kbd class="narrow">Inicio</kbd><kbd class="narrow rightgap">Re<br>Pag</kbd>
+  <kbd class="narrow">Bloq<br>Num</kbd><kbd>/</kbd><kbd>*</kbd><kbd>-</kbd>
+</div>
+ 
+<div>
+  <kbd id="tecla_especial_tabulador" class="tab"><img src="imagenes/tab.gif" alt="" height="27" width="23"></kbd>
+  <kbd id="tecla_13"></kbd><kbd id="tecla_14"></kbd><kbd id="tecla_15"></kbd><kbd id="tecla_16"></kbd>
+  <kbd id="tecla_17"></kbd><kbd id="tecla_18"></kbd><kbd id="tecla_19"></kbd><kbd id="tecla_20"></kbd>
+  <kbd id="tecla_21"></kbd><kbd id="tecla_22"></kbd><kbd id="tecla_23"></kbd><kbd id="tecla_24"></kbd>
+  <kbd id="tecla_especial_enter" class="rightgap enter-top"><img src="imagenes/enter.gif" alt="" height="24" width="24"></kbd>
+  <kbd class="narrow delete">Supr</kbd><kbd class="narrow">Fin</kbd><kbd class="narrow rightgap">Av<br>Pag</kbd>
+  <kbd>7<br><span class="narrow">Inicio</span></kbd><kbd>8<br><img src="imagenes/arrow-up-small.gif" alt="" height="13" width="21"></kbd>
+  <kbd>9<br><span class="narrow">RePag</span></kbd><kbd class="numpad-top">+</kbd>
+</div>
+ 
+<div>
+  <kbd id="tecla_especial_mayusculas" class="narrow capslock">Bloq Mayus</kbd>
+  <kbd id="tecla_25"></kbd><kbd id="tecla_26"></kbd><kbd id="tecla_27"></kbd><kbd id="tecla_28"></kbd>
+  <kbd id="tecla_29"></kbd><kbd id="tecla_30"></kbd><kbd id="tecla_31"></kbd><kbd id="tecla_32"></kbd>
+  <kbd id="tecla_33"></kbd><kbd id="tecla_34"></kbd><kbd id="tecla_35"></kbd><kbd id="tecla_36"></kbd>
+  <kbd id="enter-bottom">&nbsp;</kbd><kbd>4<br><img src="imagenes/arrow-left-small.gif" alt="" height="7" width="13"></kbd>
+  <kbd>5</kbd><kbd>6<br><img src="imagenes/arrow-right-small.gif" alt="" height="7" width="13"></kbd>
+  <kbd class="numpad-bottom">&nbsp;</kbd>
+</div>
+ 
+<div>
+  <kbd id="tecla_especial_shift_izquierdo" class="narrow shift-left"><img src="imagenes/shift.gif" alt="" height="20" width="17"></kbd>
+  <kbd>&gt;<br>&lt;</kbd><kbd id="tecla_37"></kbd><kbd id="tecla_38"></kbd><kbd id="tecla_39"></kbd>
+  <kbd id="tecla_40"></kbd><kbd id="tecla_41"></kbd><kbd id="tecla_42"></kbd><kbd id="tecla_43"></kbd>
+  <kbd id="tecla_44"></kbd><kbd id="tecla_45"></kbd><kbd id="tecla_46"></kbd>
+  <kbd id="tecla_especial_shift_derecho" class="shift-right"><img src="imagenes/shift.gif" alt="" height="20" width="17"></kbd>
+  <kbd id="arrow-up"><img src="imagenes/arrow-up.gif" alt="" height="22" width="21"></kbd>
+  <kbd>1<br><span class="narrow">Fin</span></kbd>
+  <kbd>2<br><img src="imagenes/arrow-down-small.gif" alt="" height="13" width="21"></kbd>
+  <kbd>3<br><span class="narrow">AvPag</span></kbd>
+  <kbd class="numpad-top narrow">Enter</kbd>
+</div>
+ 
+<div>
+  <kbd id="ctrl-left" class="narrow">Ctrl</kbd>
+  <kbd id="windows-left"><img src="imagenes/windows-key.gif" alt="Windows Key" height="13" width="16"></kbd>
+  <kbd id="alt-left" class="narrow">Alt</kbd>
+  <kbd id="tecla_especial_espaciadora" class="spacebar">&nbsp;</kbd>
+  <kbd  id="tecla_especial_altgr" class="narrow alt-right">Alt Gr</kbd>
+  <kbd id="windows-right"><img src="imagenes/windows-key.gif" alt="" height="13" width="16"></kbd>
+  <kbd id="application"><img src="imagenes/windows-application-key.gif" alt="" height="13" width="12"></kbd>
+  <kbd id="ctrl-right" class="narrow rightgap">Ctrl</kbd>
+  <kbd><img src="imagenes/arrow-left.gif" alt="" height="19" width="21"></kbd>
+  <kbd><img src="imagenes/arrow-down.gif" alt="" height="22" width="21"></kbd>
+  <kbd class="rightgap"><img src="imagenes/arrow-right.gif" alt="" height="19" width="21"></kbd>
+  <kbd class="numpad-0" id="_0">0<br><span class="narrow">Ins</span></kbd>
+  <kbd>.<br><span class="narrow">Supr</span></kbd>
+  <kbd class="numpad-bottom">&nbsp;</kbd>
+</div>
+ 
+</div>
+ 
+<select id="idiomas"><option>Cargando...</option></select>
+ 
+<div id="contenido"></div>
+ 
+<p>Contenido en el servidor [se actualiza automáticamente]</p>
+<div id="contenidoGuardado"></div>
+ 
+<p style="font-size:.9em;color:#888;margin-top:2em;">&copy; El diseño del teclado es obra de Chris Hester y se puede descargar desde http://www.designdetector.com/archives/05/03/KeyboardDemo.php</p>
+</body>
+ 
+</html>
